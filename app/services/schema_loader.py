@@ -6,7 +6,7 @@ from util.config import settings
 
 async def fetch_schema_rows(schema_name: str) -> List[Dict]:
     """Fetch raw column, constraint, and foreign key info from Postgres schema."""
-    query = """
+    query = f"""
     SELECT DISTINCT
         c.table_schema,
         c.table_name,
@@ -28,10 +28,10 @@ async def fetch_schema_rows(schema_name: str) -> List[Dict]:
     LEFT JOIN information_schema.constraint_column_usage ccu
         ON tc.constraint_name = ccu.constraint_name
         AND tc.table_schema = ccu.table_schema
-    WHERE c.table_schema = %s
+    WHERE c.table_schema = '{schema_name}'
     ORDER BY c.table_name, c.ordinal_position;
     """
-    conn = psycopg2.connect(**settings.DB_CONFIG)
+    conn = psycopg2.connect(settings.DATABASE_URL)
     cur = conn.cursor()
     cur.execute(query, (schema_name,))
     rows = cur.fetchall()
