@@ -14,10 +14,17 @@
       "type": "python",
       "request": "launch",
       "program": "${workspaceFolder}/app/client.py",
-      "args": ["get top 5 active talents and their manager info"],
+      "args": ["Hi, give me top 5 employee"],
       "console": "integratedTerminal",
       "envFile": "${workspaceFolder}/app/.env"
-    }
-    
+    },
+    {
+    "name": "Run FastMCP (http)",
+    "type": "python",
+    "request": "launch",
+    "module": "app.run_mcp",
+    "console": "integratedTerminal",
+    "justMyCode": false
+   }
   ]
 }

@@ -10,7 +10,7 @@ async def run_sql_query(query: str) -> str:
         query = extract_sql_oneline(query)
         print("Running SQL:", query)
 
-        conn = psycopg2.connect(**settings.DB_CONFIG)
+        conn = psycopg2.connect(settings.DATABASE_URL)
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         cur.execute(query)
