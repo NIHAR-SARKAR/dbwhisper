@@ -1,40 +1,95 @@
-from pydantic import BaseModel, Field
-from contextlib import AsyncExitStack
 import json
-from pathlib import Path
-from util.config import settings
-from services.db_executor import run_sql_query
-from services.schema_loader import get_schema_context
-from app.services.gpt_handler import OpenAIClient
+import logging
+import re
+from app.services.llm_factory import LLMFactory
+from app.services.db_factory import DatabaseFactory
+from app.services.domain_context import load_domain_context
+from app.util.config import settings
+
+logger = logging.getLogger(__name__)
 
 
-
-schema = "authentication"
-# -------------------------
-# Tools
-# -------------------------
-
-async def handle_user_query(task_input: str):
-    #  Handles user queries regarding MCP tasks, functions, or data. It processes the input query, interacts with OpenAI to generate SQL based on the provided natural language input, executes the SQL query, and returns the results.
-    
+async def handle_user_query(task_input: str) -> str:
+    """Handle natural language query: generate SQL via LLM, execute via DB, return results."""
+    db = None
+    sql_clean = None
     try:
-        schema_info = await get_schema_context(schema)
-        openAIClient_instance = OpenAIClient()
-        sql_to_execute =await openAIClient_instance.generate_sql_from_nl(schema_info,task_input)
-        result = await run_sql_query(sql_to_execute)
-        raw_text_json = result #here
-        print(sql_to_execute)
-        print(raw_text_json)
-        return raw_text_json                
-    except Exception as e:
-        print(f"Error: {str(e)}")
-        
-async def get_db_metadata():
-    # Retrieves metadata of the MCP database, including information about available tools and their functions.
-    try:
-        schema_info = await get_schema_context(schema)
-        return schema_info
-                
-    except Exception as e:
-        print(f"Error: {str(e)}")
+        # 1. Get database adapter
+        db = DatabaseFactory.get_database(settings.DB_TYPE)
+        await db.connect()
 
+        # 2. Get schema metadata
+        schema_metadata = await db.get_schema_metadata()
+        schema_json = json.dumps(schema_metadata, indent=2)
+
+        # 3. Load domain context
+        domain_context = await load_domain_context(settings.DOMAIN_CONTEXT_DIR)
+
+        # 4. Get LLM client
+        llm_client = LLMFactory.get_client(settings.LLM_PROVIDER)
+
+        # 5. Generate SQL
+        dialect = db.get_dialect_name()
+        response = await llm_client.generate_sql(schema_json, domain_context, task_input, dialect)
+        sql_raw = response.content
+
+        # 6. Extract SQL from markdown
+        sql_clean = extract_sql_from_markdown(sql_raw)
+        if not sql_clean:
+            sql_clean = sql_raw.strip()
+
+        logger.info("Generated SQL: %s", sql_clean)
+
+        # 7. Execute SQL
+        result = await db.execute_query(sql_clean)
+
+        # 8. Return results
+        return json.dumps({"sql": sql_clean, "results": result}, indent=2, default=str)
+
+    except Exception as e:
+        logger.exception("Error in handle_user_query")
+        return json.dumps({"error": str(e), "sql": sql_clean if sql_clean is not None else None})
+    finally:
+        if db:
+            try:
+                await db.disconnect()
+            except Exception:
+                pass
+
+
+async def get_db_metadata() -> str:
+    """Return database schema metadata + domain context as JSON."""
+    db = None
+    try:
+        db = DatabaseFactory.get_database(settings.DB_TYPE)
+        await db.connect()
+        schema_metadata = await db.get_schema_metadata()
+        domain_context = await load_domain_context(settings.DOMAIN_CONTEXT_DIR)
+        return json.dumps({
+            "schema": schema_metadata,
+            "domain_context": domain_context,
+            "dialect": db.get_dialect_name()
+        }, indent=2)
+    except Exception as e:
+        logger.exception("Error in get_db_metadata")
+        return json.dumps({"error": str(e)})
+    finally:
+        if db:
+            try:
+                await db.disconnect()
+            except Exception:
+                pass
+
+
+def extract_sql_from_markdown(text: str) -> str:
+    """Extract SQL from markdown code blocks."""
+    match = re.search(r"```sql\s*(.*?)\s*```", text, re.DOTALL)
+    if match:
+        raw = match.group(1)
+        return raw.strip()
+    # Also try generic code block
+    match = re.search(r"```\s*(.*?)\s*```", text, re.DOTALL)
+    if match:
+        raw = match.group(1)
+        return raw.strip()
+    return text.strip()
