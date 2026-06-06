@@ -1,0 +1,87 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Install Requirements",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/pip",
+      "args": [
+        "install",
+        "-r",
+        "requirements.txt"
+      ],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run MCP Server (HTTP)",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": [
+        "-m",
+        "app.run_mcp"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "dedicated"
+      },
+      "problemMatcher": [],
+      "options": {
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}"
+        }
+      }
+    },
+    {
+      "label": "Run MCP Server (stdio)",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": [
+        "-m",
+        "app.run_mcp"
+      ],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "dedicated"
+      },
+      "problemMatcher": [],
+      "options": {
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}",
+          "MCP_TRANSPORT": "stdio"
+        }
+      }
+    },
+    {
+      "label": "Format Code (Black)",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/black",
+      "args": [
+        "app/"
+      ],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

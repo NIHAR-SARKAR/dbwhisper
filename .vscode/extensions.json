@@ -1,0 +1,11 @@
+{
+  "recommendations": [
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "ms-python.black-formatter",
+    "ms-python.debugpy",
+    "eamodio.gitlens",
+    "redhat.vscode-yaml",
+    "dbaeumer.vscode-eslint"
+  ]
+}
