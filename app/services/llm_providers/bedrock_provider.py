@@ -1,3 +1,5 @@
+"""AWS Bedrock provider for SQL generation using the Converse API."""
+
 import boto3
 import json
 from .base import BaseLLMClient, LLMResponse
@@ -39,5 +41,5 @@ class BedrockProvider(BaseLLMClient):
                 usage=usage
             )
         except Exception as e:
-            logger.error(f"Bedrock API error: {e}")
+            logger.error("Bedrock API error: %s", e)
             raise

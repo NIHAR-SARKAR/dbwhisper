@@ -46,36 +46,10 @@ class ModelFamilyConfig:
 
 
 class AzureProvider(BaseLLMClient):
-    """Azure provider with comprehensive model support and intelligent API routing.
-
-    URL Patterns:
-    -------------
-    1. LEGACY (pre-v1 Azure OpenAI):
-       Endpoint: https://{resource}.openai.azure.com
-       URL: /openai/deployments/{deployment}/chat/completions?api-version={version}
-
-    2. V1 (modern Azure OpenAI):
-       Endpoint: https://{resource}.openai.azure.com/openai/v1/
-       URL: /chat/completions
-       Model name passed in request body.
-
-    3. RESPONSES (OpenAI Responses API):
-       Endpoint: https://{resource}.openai.azure.com/openai/v1/
-       URL: /responses
-       Uses "input" array instead of "messages", "output_text" instead of choices.
-       CRITICAL: Uses max_output_tokens (NOT max_tokens). Does NOT support temperature.
-
-    4. AI FOUNDRY (unified inference):
-       Endpoint: https://{resource}.services.ai.azure.com
-       URL: /chat/completions
-       Model name in body. Single endpoint routes to any catalog model.
-    """
+    """Azure provider with comprehensive model support and intelligent API routing."""
 
     name = "azure"
 
-    # ------------------------------------------------------------------
-    # Model family registry
-    # ------------------------------------------------------------------
     _MODEL_REGISTRY: dict[str, ModelFamilyConfig] = {
         # GPT-5.x series
         "gpt-5.5": ModelFamilyConfig("gpt-5.5", [AzureAPIPattern.AZURE_OPENAI_V1, AzureAPIPattern.AZURE_RESPONSES], AzureAPIPattern.AZURE_OPENAI_V1, prefers_developer_role=True, uses_max_completion_tokens=True, supports_reasoning_effort=True, supports_temperature=False),
@@ -96,7 +70,7 @@ class AzureProvider(BaseLLMClient):
         "gpt-5-mini": ModelFamilyConfig("gpt-5-mini", [AzureAPIPattern.AZURE_OPENAI_V1, AzureAPIPattern.AZURE_RESPONSES], AzureAPIPattern.AZURE_OPENAI_V1, prefers_developer_role=True, uses_max_completion_tokens=True, supports_reasoning_effort=True, supports_temperature=False),
         "gpt-5-nano": ModelFamilyConfig("gpt-5-nano", [AzureAPIPattern.AZURE_OPENAI_V1, AzureAPIPattern.AZURE_RESPONSES], AzureAPIPattern.AZURE_OPENAI_V1, prefers_developer_role=True, uses_max_completion_tokens=True, supports_reasoning_effort=True, supports_temperature=False),
 
-        # o-series reasoning models
+        # o-series
         "o4-mini": ModelFamilyConfig("o4-mini", [AzureAPIPattern.AZURE_OPENAI_V1, AzureAPIPattern.AZURE_RESPONSES], AzureAPIPattern.AZURE_OPENAI_V1, prefers_developer_role=True, uses_max_completion_tokens=True, supports_reasoning_effort=True, supports_temperature=False),
         "o4": ModelFamilyConfig("o4", [AzureAPIPattern.AZURE_OPENAI_V1, AzureAPIPattern.AZURE_RESPONSES], AzureAPIPattern.AZURE_OPENAI_V1, prefers_developer_role=True, uses_max_completion_tokens=True, supports_reasoning_effort=True, supports_temperature=False),
         "o3-pro": ModelFamilyConfig("o3-pro", [AzureAPIPattern.AZURE_OPENAI_V1, AzureAPIPattern.AZURE_RESPONSES], AzureAPIPattern.AZURE_OPENAI_V1, prefers_developer_role=True, uses_max_completion_tokens=True, supports_reasoning_effort=True, supports_temperature=False),
@@ -105,7 +79,7 @@ class AzureProvider(BaseLLMClient):
         "o1-mini": ModelFamilyConfig("o1-mini", [AzureAPIPattern.AZURE_OPENAI_V1, AzureAPIPattern.AZURE_RESPONSES], AzureAPIPattern.AZURE_OPENAI_V1, prefers_developer_role=True, uses_max_completion_tokens=True, supports_reasoning_effort=False, supports_temperature=False),
         "o1": ModelFamilyConfig("o1", [AzureAPIPattern.AZURE_OPENAI_V1, AzureAPIPattern.AZURE_RESPONSES], AzureAPIPattern.AZURE_OPENAI_V1, prefers_developer_role=True, uses_max_completion_tokens=True, supports_reasoning_effort=True, supports_temperature=False),
 
-        # GPT-4.x series
+        # GPT-4.x
         "gpt-4.1-nano": ModelFamilyConfig("gpt-4.1-nano", [AzureAPIPattern.AZURE_OPENAI_V1, AzureAPIPattern.AZURE_OPENAI_LEGACY], AzureAPIPattern.AZURE_OPENAI_V1),
         "gpt-4.1-mini": ModelFamilyConfig("gpt-4.1-mini", [AzureAPIPattern.AZURE_OPENAI_V1, AzureAPIPattern.AZURE_OPENAI_LEGACY], AzureAPIPattern.AZURE_OPENAI_V1),
         "gpt-4.1": ModelFamilyConfig("gpt-4.1", [AzureAPIPattern.AZURE_OPENAI_V1, AzureAPIPattern.AZURE_OPENAI_LEGACY], AzureAPIPattern.AZURE_OPENAI_V1),
@@ -114,7 +88,7 @@ class AzureProvider(BaseLLMClient):
         "gpt-4-turbo": ModelFamilyConfig("gpt-4-turbo", [AzureAPIPattern.AZURE_OPENAI_LEGACY, AzureAPIPattern.AZURE_OPENAI_V1], AzureAPIPattern.AZURE_OPENAI_LEGACY),
         "gpt-4": ModelFamilyConfig("gpt-4", [AzureAPIPattern.AZURE_OPENAI_LEGACY, AzureAPIPattern.AZURE_OPENAI_V1], AzureAPIPattern.AZURE_OPENAI_LEGACY),
 
-        # Azure AI Foundry / non-OpenAI models
+        # Azure AI Foundry / non-OpenAI
         "deepseek": ModelFamilyConfig("deepseek", [AzureAPIPattern.AZURE_AI_FOUNDRY], AzureAPIPattern.AZURE_AI_FOUNDRY),
         "llama": ModelFamilyConfig("llama", [AzureAPIPattern.AZURE_AI_FOUNDRY], AzureAPIPattern.AZURE_AI_FOUNDRY),
         "meta-llama": ModelFamilyConfig("meta-llama", [AzureAPIPattern.AZURE_AI_FOUNDRY], AzureAPIPattern.AZURE_AI_FOUNDRY),
@@ -149,17 +123,12 @@ class AzureProvider(BaseLLMClient):
         self.v1_api_version = ""
 
         self.client = httpx.AsyncClient(
-            headers={
-                "api-key": self.api_key,
-                "Content-Type": "application/json",
-            },
+            headers={"api-key": self.api_key, "Content-Type": "application/json"},
             timeout=httpx.Timeout(120.0, connect=10.0),
         )
 
     def _detect_model_config(self, model_or_deployment: str) -> ModelFamilyConfig:
-        """Auto-detect model family config from deployment/model name."""
         model_lower = model_or_deployment.lower().replace("_", "-").replace(" ", "-")
-
         best_match: Optional[str] = None
         best_len = 0
         for prefix in self._MODEL_REGISTRY:
@@ -167,15 +136,11 @@ class AzureProvider(BaseLLMClient):
             if model_lower.startswith(prefix_lower) and len(prefix_lower) > best_len:
                 best_match = prefix
                 best_len = len(prefix_lower)
-
         if best_match:
             return self._MODEL_REGISTRY[best_match]
-
         for prefix, config in self._MODEL_REGISTRY.items():
             if prefix.lower() in model_lower:
                 return config
-
-        # Fallback: treat as legacy opaque deployment
         return ModelFamilyConfig(
             family="unknown",
             supported_patterns=[AzureAPIPattern.AZURE_OPENAI_LEGACY],
@@ -183,16 +148,12 @@ class AzureProvider(BaseLLMClient):
         )
 
     def _resolve_pattern(self, config: ModelFamilyConfig) -> AzureAPIPattern:
-        """Resolve which API pattern to use."""
         return config.default_pattern
 
     def _get_url(self, deployment: str, pattern: AzureAPIPattern) -> str:
-        """Build Azure API URL based on pattern."""
         base = self.endpoint.rstrip("/")
-
         if pattern == AzureAPIPattern.AZURE_OPENAI_LEGACY:
             return f"{base}/openai/deployments/{deployment}/chat/completions?api-version={self.api_version}"
-
         elif pattern == AzureAPIPattern.AZURE_OPENAI_V1:
             if "/openai/v1" not in base:
                 base = f"{base}/openai/v1"
@@ -200,12 +161,10 @@ class AzureProvider(BaseLLMClient):
             if self.v1_api_version:
                 url += f"?api-version={self.v1_api_version}"
             return url
-
         elif pattern == AzureAPIPattern.AZURE_RESPONSES:
             if "/openai/v1" not in base:
                 base = f"{base}/openai/v1"
             return f"{base}/responses?api-version={self.responses_api_version}"
-
         elif pattern == AzureAPIPattern.AZURE_AI_FOUNDRY:
             if ".services.ai.azure.com" in base or (".azure.com" in base and ".openai.azure.com" not in base):
                 return f"{base}/chat/completions"
@@ -213,17 +172,9 @@ class AzureProvider(BaseLLMClient):
                 if "/openai/v1" not in base:
                     base = f"{base}/openai/v1"
                 return f"{base}/chat/completions"
+        raise RuntimeError(f"Unsupported API pattern: {pattern}")
 
-        else:
-            raise RuntimeError(f"Unsupported API pattern: {pattern}")
-
-    def _build_messages(
-        self,
-        config: ModelFamilyConfig,
-        system_prompt: Optional[str],
-        user_prompt: str,
-    ) -> list[dict]:
-        """Build messages array, handling developer vs system role."""
+    def _build_messages(self, config: ModelFamilyConfig, system_prompt: Optional[str], user_prompt: str) -> list[dict]:
         messages = []
         if system_prompt:
             role = "developer" if config.prefers_developer_role else "system"
@@ -231,125 +182,72 @@ class AzureProvider(BaseLLMClient):
         messages.append({"role": "user", "content": user_prompt})
         return messages
 
-    def _build_request_body(
-        self,
-        pattern: AzureAPIPattern,
-        config: ModelFamilyConfig,
-        messages: list[dict],
-        deployment: str,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
-    ) -> dict:
-        """Build request payload based on API pattern and model family.
-
-        CRITICAL: The Responses API does NOT support max_tokens or temperature.
-        It uses max_output_tokens instead of max_tokens.
-        Reasoning models (GPT-5 codex, o-series) do not support temperature.
-        """
+    def _build_request_body(self, pattern: AzureAPIPattern, config: ModelFamilyConfig,
+                            messages: list[dict], deployment: str,
+                            temperature: Optional[float] = None, max_tokens: Optional[int] = None) -> dict:
         if pattern == AzureAPIPattern.AZURE_RESPONSES:
-            # ------------------------------------------------------------------
-            # Responses API body
-            # ------------------------------------------------------------------
             inputs = []
             for msg in messages:
                 if msg["role"] in ("system", "developer"):
                     inputs.append({"role": "developer", "content": msg["content"]})
                 else:
                     inputs.append({"role": msg["role"], "content": msg["content"]})
-
-            body: dict[str, Any] = {
-                "model": deployment,
-                "input": inputs,
-            }
-
+            body: dict[str, Any] = {"model": deployment, "input": inputs}
             if max_tokens is not None and max_tokens > 0:
                 body["max_output_tokens"] = max_tokens
-
-            # BULLETPROOF: Explicitly strip any parameters that the Responses API rejects.
             body.pop("max_tokens", None)
             body.pop("temperature", None)
             body.pop("top_p", None)
             body.pop("frequency_penalty", None)
             body.pop("presence_penalty", None)
             body.pop("messages", None)
-
             return body
-
         else:
-            # ------------------------------------------------------------------
-            # Chat Completions body (Legacy, V1, AI Foundry)
-            # ------------------------------------------------------------------
             body: dict[str, Any] = {"messages": messages}
-
             if pattern in (AzureAPIPattern.AZURE_OPENAI_V1, AzureAPIPattern.AZURE_AI_FOUNDRY):
                 body["model"] = deployment
-
             if temperature is not None and config.supports_temperature:
                 body["temperature"] = temperature
-
             if max_tokens is not None:
                 if config.uses_max_completion_tokens and pattern != AzureAPIPattern.AZURE_AI_FOUNDRY:
                     body["max_completion_tokens"] = max_tokens
                 else:
                     body["max_tokens"] = max_tokens
-
             return body
 
     def _parse_response(self, pattern: AzureAPIPattern, response_json: dict) -> str:
-        """Extract text content from Azure response based on API pattern."""
         if pattern == AzureAPIPattern.AZURE_RESPONSES:
-            # Responses API: try top-level output_text first
             text = response_json.get("output_text")
             if text:
                 return text
-            # Fallback to output array
             output = response_json.get("output", [])
             if output and isinstance(output, list):
                 content = output[0].get("content", [])
                 if content and isinstance(content, list):
                     return content[0].get("text", "")
             return json.dumps(response_json)
-
-        # Chat Completions (Legacy, V1, AI Foundry)
         choices = response_json.get("choices", [])
         if choices and isinstance(choices, list):
             message = choices[0].get("message", {})
             return message.get("content", "")
-
-        # Ultimate fallback
         return json.dumps(response_json)
 
     async def generate_sql(self, schema: str, domain_context: str, user_query: str, dialect: str) -> LLMResponse:
-        """Generate SQL using Azure OpenAI / Azure AI via raw httpx."""
         system_prompt = self._build_prompt(schema, domain_context, dialect)
         config = self._detect_model_config(self.deployment)
         pattern = self._resolve_pattern(config)
         url = self._get_url(self.deployment, pattern)
         messages = self._build_messages(config, system_prompt, user_query)
-
         temperature = 0.1 if config.supports_temperature else None
         max_tokens = 4000
-
-        body = self._build_request_body(
-            pattern=pattern,
-            config=config,
-            messages=messages,
-            deployment=self.deployment,
-            temperature=temperature,
-            max_tokens=max_tokens,
-        )
-
+        body = self._build_request_body(pattern, config, messages, self.deployment, temperature, max_tokens)
         try:
             response = await self.client.post(url, json=body)
             response.raise_for_status()
             data = response.json()
             content = self._parse_response(pattern, data)
             usage = data.get("usage")
-            return LLMResponse(
-                content=content.strip(),
-                model=self.deployment,
-                usage=usage,
-            )
+            return LLMResponse(content=content.strip(), model=self.deployment, usage=usage)
         except httpx.HTTPStatusError as e:
             logger.error("Azure HTTP error: %s - %s", e.response.status_code, e.response.text)
             raise RuntimeError(f"Azure API error {e.response.status_code}: {e.response.text}") from e

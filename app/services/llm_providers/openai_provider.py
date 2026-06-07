@@ -1,3 +1,5 @@
+"""OpenAI ChatGPT provider for SQL generation."""
+
 from openai import AsyncOpenAI
 from .base import BaseLLMClient, LLMResponse
 from app.util.config import settings
@@ -31,5 +33,5 @@ class OpenAIProvider(BaseLLMClient):
                 usage=response.usage.model_dump() if response.usage else None
             )
         except Exception as e:
-            logger.error(f"OpenAI API error: {e}")
+            logger.error("OpenAI API error: %s", e)
             raise

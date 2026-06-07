@@ -1,3 +1,5 @@
+"""Kimi (Moonshot AI) provider for SQL generation."""
+
 from openai import AsyncOpenAI
 from .base import BaseLLMClient, LLMResponse
 from app.util.config import settings
@@ -10,10 +12,7 @@ class KimiProvider(BaseLLMClient):
     """Kimi (Moonshot AI) provider for SQL generation."""
 
     def __init__(self):
-        self.client = AsyncOpenAI(
-            api_key=settings.KIMI_API_KEY,
-            base_url=settings.KIMI_BASE_URL
-        )
+        self.client = AsyncOpenAI(api_key=settings.KIMI_API_KEY, base_url=settings.KIMI_BASE_URL)
         self.model = settings.KIMI_MODEL
 
     async def generate_sql(self, schema: str, domain_context: str, user_query: str, dialect: str) -> LLMResponse:
@@ -34,5 +33,5 @@ class KimiProvider(BaseLLMClient):
                 usage=response.usage.model_dump() if response.usage else None
             )
         except Exception as e:
-            logger.error(f"Kimi API error: {e}")
+            logger.error("Kimi API error: %s", e)
             raise

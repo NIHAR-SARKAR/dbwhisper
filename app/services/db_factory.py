@@ -1,3 +1,5 @@
+"""Factory for creating database adapters based on configuration."""
+
 import logging
 from .databases.base import BaseDatabase
 from .databases.postgres import PostgreSQLDatabase
@@ -22,7 +24,6 @@ class DatabaseFactory:
 
     @staticmethod
     def get_database(db_type: str) -> BaseDatabase:
-        """Return the correct database adapter based on config."""
         db_type = db_type.lower().strip()
         if db_type not in DatabaseFactory._databases:
             raise ValueError(f"Unsupported database type: '{db_type}'. Supported: {list(DatabaseFactory._databases.keys())}")

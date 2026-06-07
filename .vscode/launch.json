@@ -2,16 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Debug MCP client",
-      "type": "python",
-      "request": "launch",
-      "program": "${workspaceFolder}/app/client.py",
-      "cwd": "${workspaceFolder}",
-      "console": "integratedTerminal",
-      "envFile": "${workspaceFolder}/.env"
-    },
-    {
-      "name": "Run FastMCP Server (HTTP)",
+      "name": "Run dbwhisper Server",
       "type": "python",
       "request": "launch",
       "module": "app.run_mcp",
@@ -21,17 +12,13 @@
       "envFile": "${workspaceFolder}/.env"
     },
     {
-      "name": "Run FastMCP Server (stdio)",
+      "name": "Debug Tools",
       "type": "python",
       "request": "launch",
-      "module": "app.run_mcp",
+      "program": "${workspaceFolder}/app/tools.py",
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
-      "justMyCode": false,
-      "envFile": "${workspaceFolder}/.env",
-      "env": {
-        "MCP_TRANSPORT": "stdio"
-      }
+      "envFile": "${workspaceFolder}/.env"
     }
   ]
 }

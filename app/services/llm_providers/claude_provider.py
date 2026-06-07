@@ -1,3 +1,5 @@
+"""Anthropic Claude provider for SQL generation."""
+
 from anthropic import AsyncAnthropic
 from .base import BaseLLMClient, LLMResponse
 from app.util.config import settings
@@ -32,5 +34,5 @@ class ClaudeProvider(BaseLLMClient):
                 } if response.usage else None
             )
         except Exception as e:
-            logger.error(f"Claude API error: {e}")
+            logger.error("Claude API error: %s", e)
             raise

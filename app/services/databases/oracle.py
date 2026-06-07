@@ -1,3 +1,5 @@
+"""Oracle database adapter using oracledb."""
+
 import oracledb
 import json
 import logging
@@ -13,43 +15,46 @@ class OracleDatabase(BaseDatabase):
     """Oracle database adapter using oracledb."""
 
     def __init__(self):
-        self.conn = None
+        self.pool = None
         self.schema = settings.DB_SCHEMA.upper()
 
     async def connect(self) -> None:
-        """Connect to Oracle database."""
         if settings.DATABASE_URL:
-            self.conn = oracledb.connect(settings.DATABASE_URL)
+            self.pool = oracledb.create_pool(settings.DATABASE_URL, min=2, max=10)
         else:
             dsn = f"{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
-            self.conn = oracledb.connect(
+            self.pool = oracledb.create_pool(
                 user=settings.DB_USER,
                 password=settings.DB_PASSWORD,
-                dsn=dsn
+                dsn=dsn,
+                min=2, max=10
             )
-        logger.info("Connected to Oracle.")
+        logger.info("Oracle pool created.")
 
     async def disconnect(self) -> None:
-        """Close Oracle connection."""
-        if self.conn:
-            self.conn.close()
-            self.conn = None
-            logger.info("Disconnected from Oracle.")
+        if self.pool:
+            self.pool.close()
+            self.pool = None
+            logger.info("Oracle pool closed.")
 
-    async def execute_query(self, sql: str) -> List[Dict[str, Any]]:
-        """Execute SQL query and return results."""
-        with self.conn.cursor() as cur:
-            cur.execute(sql)
-            if cur.description:
-                columns = [desc[0] for desc in cur.description]
-                rows = cur.fetchall()
-                return [dict(zip(columns, row)) for row in rows]
-            else:
-                self.conn.commit()
+    async def execute_query(self, sql: str, limit: int = 100) -> List[Dict[str, Any]]:
+        sql = self._inject_limit(sql, limit)
+        with self.pool.acquire() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql)
+                if cur.description:
+                    columns = [desc[0] for desc in cur.description]
+                    rows = cur.fetchall()
+                    return [dict(zip(columns, row)) for row in rows]
                 return [{"status": "Query executed successfully"}]
 
+    def _inject_limit(self, sql: str, limit: int) -> str:
+        stripped = sql.strip().lower()
+        if stripped.startswith("select") and "fetch first" not in stripped and "rownum" not in stripped:
+            return f"{sql.rstrip(';')} FETCH FIRST {limit} ROWS ONLY"
+        return sql
+
     async def get_schema_metadata(self) -> List[Dict[str, Any]]:
-        """Fetch schema metadata from Oracle."""
         query = """
         SELECT
             c.OWNER AS table_schema, c.TABLE_NAME, c.COLUMN_NAME, c.DATA_TYPE, c.COLUMN_ID AS ordinal_position,
@@ -65,15 +70,15 @@ class OracleDatabase(BaseDatabase):
         WHERE c.OWNER = :schema_name
         ORDER BY c.TABLE_NAME, c.COLUMN_ID
         """
-        with self.conn.cursor() as cur:
-            cur.execute(query, {"schema_name": self.schema})
-            columns = [desc[0] for desc in cur.description]
-            rows = cur.fetchall()
-            raw_rows = [dict(zip(columns, row)) for row in rows]
+        with self.pool.acquire() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, {"schema_name": self.schema})
+                columns = [desc[0] for desc in cur.description]
+                rows = cur.fetchall()
+                raw_rows = [dict(zip(columns, row)) for row in rows]
         return self._structure_metadata(raw_rows)
 
     def _structure_metadata(self, rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Structure raw rows into unified schema format."""
         schema_dict = defaultdict(lambda: {"table": "", "columns": []})
         for row in rows:
             table = row["TABLE_NAME"]
@@ -93,3 +98,11 @@ class OracleDatabase(BaseDatabase):
 
     def get_dialect_name(self) -> str:
         return "oracle"
+
+    async def explain_query(self, sql: str) -> Dict[str, Any]:
+        with self.pool.acquire() as conn:
+            with conn.cursor() as cur:
+                cur.execute(f"EXPLAIN PLAN FOR {sql}")
+                cur.execute("SELECT PLAN_TABLE_OUTPUT FROM TABLE(DBMS_XPLAN.DISPLAY())")
+                rows = cur.fetchall()
+                return {"plan": [r[0] for r in rows]}

@@ -1,8 +1,7 @@
-"""Legacy database executor - now delegates to database factory.
+"""Legacy database executor — delegates to database factory."""
 
-Kept for backward compatibility. Use DatabaseFactory.get_database() directly.
-"""
 import logging
+import json
 from app.services.db_factory import DatabaseFactory
 from app.util.config import settings
 
@@ -10,17 +9,16 @@ logger = logging.getLogger(__name__)
 
 
 async def run_sql_query(query: str) -> str:
-    """Execute SQL query and return JSON string result. Delegates to the active database adapter."""
+    """Execute SQL query and return JSON string result."""
     db = None
     try:
         db = DatabaseFactory.get_database(settings.DB_TYPE)
         await db.connect()
         result = await db.execute_query(query)
-        import json
         return json.dumps(result, indent=2, default=str)
-    except Exception as e:
+    except Exception:
         logger.exception("Error executing SQL query")
-        return json.dumps({"error": str(e)})
+        return json.dumps({"error": "Execution failed"})
     finally:
         if db:
             try:

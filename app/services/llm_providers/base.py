@@ -1,3 +1,5 @@
+"""Base class for all LLM provider clients."""
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Optional
@@ -21,13 +23,13 @@ class BaseLLMClient(ABC):
 
     def _build_prompt(self, schema: str, domain_context: str, dialect: str) -> str:
         """Build the system prompt for SQL generation."""
-        base = f"You are an expert {dialect} assistant.\n\nDatabase Schema:\n{schema}\n\n"
+        base = f"You are an expert {dialect} assistant.Database Schema:{schema}"
         if domain_context and domain_context.strip():
-            base += f"Domain Context:\n{domain_context}\n\n"
-        base += (
-            "Rules:\n"
-            "- Use fully qualified names like 'schema.table'\n"
-            "- Consider end_date columns for calculations unless the user query mentions inactive status\n"
+            base += f"Domain Context:{domain_context}"
+        base += ("Rules:"
+            "- Use fully qualified names like 'schema.table' "
+            "- Consider end_date columns for calculations unless the user query mentions inactive status"
             "- Only return the SQL query, no comments or extra text."
+            "- If the query could return many rows, add LIMIT 100."
         )
         return base
