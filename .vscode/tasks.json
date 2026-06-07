@@ -1,0 +1,34 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Install Requirements",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/pip",
+      "args": ["install", "-r", "requirements.txt"],
+      "group": "build"
+    },
+    {
+      "label": "Run Server",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["-m", "app.run_mcp"],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "options": {
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}"
+        }
+      }
+    },
+    {
+      "label": "Format Code",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/black",
+      "args": ["app/"],
+      "group": "build"
+    }
+  ]
+}
