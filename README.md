@@ -110,7 +110,7 @@ Revenue = SUM(order_total) where order_status = 'completed'.
 ### 1. Install
 
 ```bash
-git clone https://github.com/yourusername/dbwhisper.git
+git clone https://github.com/NIHAR-SARKAR/dbwhisper.git
 cd dbwhisper
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
@@ -354,8 +354,8 @@ APACHE License — see [LICENSE](LICENSE) for full text.
 
 - 📖 Documentation: [ARCHITECTURE.md](ARCHITECTURE.md)
 - 🛠️ Setup Guide: [SETUP.md](SETUP.md)
-- 🐛 Issues: [GitHub Issues](https://github.com/yourusername/dbwhisper/issues)
-- 💬 Discussions: [GitHub Discussions](https://github.com/yourusername/dbwhisper/discussions)
+- 🐛 Issues: [GitHub Issues](https://github.com/NIHAR-SARKAR/dbwhisper/issues)
+- 💬 Discussions: [GitHub Discussions](https://github.com/NIHAR-SARKAR/dbwhisper/discussions)
 
 ---
 

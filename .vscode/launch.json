@@ -1,19 +1,19 @@
 {
   "version": "0.2.0",
   "configurations": [
-    {
-      "name": "Run dbwhisper Server",
-      "type": "python",
-      "request": "launch",
-      "module": "app.run_mcp",
-      "cwd": "${workspaceFolder}",
-      "console": "integratedTerminal",
-      "justMyCode": false,
-      "envFile": "${workspaceFolder}/.env"
-    },
+  {
+    "name": "Run dbwhisper Server",
+    "type": "debugpy",
+    "request": "launch",
+    "module": "app.run_mcp",
+    "cwd": "${workspaceFolder}",
+    "console": "integratedTerminal",
+    "justMyCode": false,
+    "envFile": "${workspaceFolder}/.env"
+  },
     {
       "name": "Debug Tools",
-      "type": "python",
+      "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}/app/tools.py",
       "cwd": "${workspaceFolder}",

@@ -230,6 +230,18 @@ curl https://packages.microsoft.com/config/ubuntu/22.04/prod.list | sudo tee /et
 sudo apt-get update
 sudo ACCEPT_EULA=Y apt-get install -y msodbcsql17 unixodbc-dev
 
+# Windows
+## powershell
+Download the ODBC Driver 17 installer
+Invoke-WebRequest -Uri "https://go.microsoft.com/fwlink/?linkid=2187214" `
+  -OutFile "msodbcsql.msi"
+
+Start-Process msiexec.exe -Wait -ArgumentList `
+  '/i msodbcsql.msi /quiet /norestart IACCEPTMSODBCSQLLICENSETERMS=YES'
+
+## Check installed ODBC drivers
+Get-OdbcDriver | Where-Object { $_.Name -like "*SQL*" }
+
 # .env
 DB_TYPE=mssql
 DB_HOST=localhost
